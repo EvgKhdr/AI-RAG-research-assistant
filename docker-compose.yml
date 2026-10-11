@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env          # GEMINI_API_KEY, GROQ_API_KEY (see .env.example)
+    volumes:
+      - app_data:/data  # SQLite, Chroma and uploaded documents
+    restart: unless-stopped
+
+volumes:
+  app_data:

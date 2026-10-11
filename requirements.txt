@@ -1,0 +1,8 @@
+streamlit==1.65.0
+openai>=1.50
+python-dotenv>=1.0
+sqlalchemy>=2.0
+chromadb>=1.5
+sentence-transformers>=6.0
+pypdf>=6.0
+python-docx>=1.2

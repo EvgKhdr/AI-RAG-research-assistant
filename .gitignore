@@ -218,3 +218,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# App data (SQLite, Chroma, uploads)
+/data/
+
+# Claude Code project instructions (local only)
+CLAUDE.md
