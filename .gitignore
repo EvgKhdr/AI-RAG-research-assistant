@@ -224,3 +224,9 @@ __marimo__/
 
 # Claude Code project instructions (local only)
 CLAUDE.md
+
+# macOS
+.DS_Store
+
+# Local test documents
+test_folder/
