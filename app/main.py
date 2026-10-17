@@ -5,7 +5,9 @@ import streamlit as st
 import db
 import folders
 import rag
-from config import DEFAULT_MODEL, MAX_HISTORY_MESSAGES, MODELS, PROVIDERS, api_key, is_available, model_label
+from config import (
+    DEFAULT_MODEL, MAX_HISTORY_MESSAGES, MODELS, PROVIDERS, api_key, is_available, model_label, context_chars_for,
+)
 from llm import stream_chat
 
 st.set_page_config(page_title="Research Assistant", page_icon="📚", layout="wide")
@@ -129,7 +131,8 @@ def show_sources(sources: list[dict] | None) -> None:
     with st.expander(f"Sources ({len(sources)})"):
         for i, h in enumerate(sources, 1):
             where = f"{h['filename']}, p. {h['page']}" if h.get("page") else h["filename"]
-            st.markdown(f"**[{i}] {where}** · match {h['score']:.0%}")
+            via = " · 🔤 keyword match" if h.get("via") in ("keyword", "both") else ""
+            st.markdown(f"**[{i}] {where}** · match {h['score']:.0%}{via}")
             st.caption(h["text"][:400] + ("…" if len(h["text"]) > 400 else ""))
 
 
@@ -155,7 +158,7 @@ def chat_view():
     # st.bottom pins widgets to the bottom bar, next to the chat input
     with st.bottom:
         ids = [m["id"] for m in MODELS]
-        picker, scope_col = st.columns([2, 3])
+        picker, scope_col, strict_col = st.columns([2, 3, 1.2], vertical_alignment="center")
         all_folders = {f["id"]: f["name"] for f in folders.list_folders()}
         scope = scope_col.multiselect(
             "Folders",
@@ -172,6 +175,10 @@ def chat_view():
             format_func=lambda i: model_label(i) + ("" if is_available(i) else "  (no API key)"),
             label_visibility="collapsed",
             key=f"model_{cid}",
+        )
+        docs_only = strict_col.toggle(
+            "Docs only", value=True, key="docs_only",
+            help="On: answer strictly from your documents. Off: the model may add general knowledge, labelled as such.",
         )
         prompt = st.chat_input("Ask something about your documents…")
 
@@ -193,8 +200,10 @@ def chat_view():
         with st.chat_message("assistant"):
             try:
                 with st.spinner("Searching documents…"):
-                    hits = rag.retrieve(prompt, scope or None)
-                reply = st.write_stream(stream_chat(model, rag.build_messages(history, prompt, hits)))
+                    docs = folders.scope_documents(scope or None)
+                    hits = rag.retrieve(prompt, scope or None, context_chars_for(model), docs)
+                messages = rag.build_messages(history, prompt, hits, docs, docs_only)
+                reply = st.write_stream(stream_chat(model, messages))
             except Exception as e:  # retrieval, network, auth or quota errors
                 st.error(f"Request failed: {e}")  # nothing is saved, so history stays consistent
                 return

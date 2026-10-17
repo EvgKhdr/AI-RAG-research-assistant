@@ -60,6 +60,18 @@ def list_folders() -> list[dict]:
         ]
 
 
+def scope_documents(folder_ids: list[int] | None = None) -> list[dict]:
+    """Documents in the given folders (None = all), with folder name and index status."""
+    with Session(engine) as s:
+        q = select(Document, Folder.name).join(Folder).order_by(Folder.name, Document.filename)
+        if folder_ids:
+            q = q.where(Document.folder_id.in_(folder_ids))
+        return [
+            {"id": d.id, "filename": d.filename, "folder": name, "status": d.status}
+            for d, name in s.execute(q)
+        ]
+
+
 def create_folder(name: str) -> int:
     name = name.strip()
     if not name:
